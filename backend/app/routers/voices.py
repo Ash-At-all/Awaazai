@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, Query, HTTPException
+import re
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from pathlib import Path
+import os
 
 from ..database import get_db
 from ..models import Voice
@@ -11,6 +13,8 @@ from ..services.audio_service import AudioService
 from ..config import settings
 
 router = APIRouter(prefix="/api/voices", tags=["Voices"])
+
+VOICE_ID_REGEX = re.compile(r"^[a-z0-9_-]{1,50}$")
 
 def seed_default_voices(db: Session):
     """Seed the database with licensed Indian voices if empty."""
@@ -74,22 +78,34 @@ def list_voices(
 
 @router.get("/{voice_id}")
 def get_voice(voice_id: str, db: Session = Depends(get_db)):
-    voice = db.query(Voice).filter(Voice.id == voice_id.lower()).first()
+    clean_id = voice_id.lower().strip()
+    if not VOICE_ID_REGEX.match(clean_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid voice ID format.")
+
+    voice = db.query(Voice).filter(Voice.id == clean_id).first()
     if not voice:
-        raise HTTPException(status_code=404, detail=f"Voice '{voice_id}' not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Voice '{voice_id}' not found.")
     return voice.to_dict()
 
 @router.get("/{voice_id}/sample")
 async def get_voice_sample(voice_id: str, db: Session = Depends(get_db)):
-    voice = db.query(Voice).filter(Voice.id == voice_id.lower()).first()
+    clean_id = voice_id.lower().strip()
+    if not VOICE_ID_REGEX.match(clean_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid voice ID format.")
+
+    voice = db.query(Voice).filter(Voice.id == clean_id).first()
     if not voice:
         seed_default_voices(db)
-        voice = db.query(Voice).filter(Voice.id == voice_id.lower()).first()
+        voice = db.query(Voice).filter(Voice.id == clean_id).first()
         if not voice:
-            raise HTTPException(status_code=404, detail=f"Voice '{voice_id}' not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Voice '{voice_id}' not found.")
 
     sample_filename = f"sample_{voice.id}.wav"
-    sample_path = settings.SAMPLE_DIR / sample_filename
+    base_dir = settings.SAMPLE_DIR.resolve()
+    sample_path = (base_dir / sample_filename).resolve()
+
+    if not sample_path.is_relative_to(base_dir):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
     if not sample_path.exists() or sample_path.stat().st_size == 0:
         filename, _, _, _ = await AudioService.generate_speech(
@@ -107,5 +123,9 @@ async def get_voice_sample(voice_id: str, db: Session = Depends(get_db)):
     return FileResponse(
         path=str(sample_path),
         media_type="audio/wav",
-        headers={"Content-Disposition": f'inline; filename="{sample_filename}"'}
+        headers={
+            "Content-Disposition": f'inline; filename="{sample_filename}"',
+            "Cache-Control": "public, max-age=86400",
+            "X-Content-Type-Options": "nosniff"
+        }
     )

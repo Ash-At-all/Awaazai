@@ -105,7 +105,7 @@ class AudioService:
         file_path = settings.AUDIO_DIR / filename
         file_url = f"/api/audio/{filename}"
 
-        # 1. Check cache
+        # 1. Check cache (O(1) filesystem lookup)
         if file_path.exists() and file_path.stat().st_size > 0:
             duration = cls.get_audio_duration(file_path)
             return filename, file_url, duration, True
@@ -120,14 +120,19 @@ class AudioService:
             audio_format=audio_format
         )
 
-        # 3. Save to disk
-        with open(file_path, "wb") as f:
+        # 3. Save atomically via temporary file to prevent partial file read races
+        temp_file = settings.AUDIO_DIR / f".tmp_{filename}"
+        with open(temp_file, "wb") as f:
             f.write(raw_audio)
 
-        # 4. Apply AI label metadata
-        cls.apply_ai_metadata(file_path, audio_format)
+        # 4. Apply AI label metadata before publishing
+        cls.apply_ai_metadata(temp_file, audio_format)
 
         # 5. Measure duration
-        duration = cls.get_audio_duration(file_path)
+        duration = cls.get_audio_duration(temp_file)
+
+        # 6. Atomic move to target cache file
+        if temp_file.exists():
+            temp_file.replace(file_path)
 
         return filename, file_url, duration, False

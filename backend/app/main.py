@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .database import engine, Base
 from .routers import voices, tts
+from .security import RateLimitMiddleware, SecurityHeadersMiddleware
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
@@ -13,13 +14,23 @@ app = FastAPI(
     description="ElevenLabs-style Text-to-Speech Platform focused exclusively on Indian Voices (Hindi & Hinglish)",
 )
 
+# Apply Security Headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Apply Rate Limiting
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=settings.RATE_LIMIT_PER_MINUTE,
+    window_seconds=60
+)
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 )
 
 # Include Routers

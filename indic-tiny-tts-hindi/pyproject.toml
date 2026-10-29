@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "indic-tiny-tts"
+version = "0.1.0"
+description = "Small single-language Indic text-to-speech runtime (Matcha-style acoustic model + Vocos vocoder)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT (code); model weights CC-BY-4.0, see LICENSE.md"}
+dependencies = ["torch>=2.1", "numpy", "safetensors", "huggingface_hub"]
+
+[project.scripts]
+indic-tiny-tts = "indic_tiny_tts.infer:_main"
+
+[tool.setuptools]
+packages = ["indic_tiny_tts", "indic_tiny_tts.frontend", "indic_tiny_tts.model", "indic_tiny_tts.textnorm", "indic_tiny_tts.vendor", "indic_tiny_tts.vendor.matcha", "indic_tiny_tts.vendor.vocos"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["LICENSE", "LICENSE-*", "UPSTREAM.txt"]

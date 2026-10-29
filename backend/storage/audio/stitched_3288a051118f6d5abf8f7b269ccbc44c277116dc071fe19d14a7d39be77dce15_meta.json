@@ -1,0 +1,92 @@
+{
+  "id": "stitched_3288a051118f6d5abf8f7b269ccbc44c277116dc071fe19d14a7d39be77dce15",
+  "format": "wav",
+  "duration_seconds": 7.21,
+  "duration_ms": 7210,
+  "segments": [
+    {
+      "type": "dialogue",
+      "artist": "Artist1",
+      "artist_id": "aob6mvc",
+      "text": "hello my name is mujahid apsemilkar accha laga",
+      "start_ms": 0,
+      "end_ms": 4270,
+      "duration_ms": 4270,
+      "source_start": 8,
+      "source_end": 56,
+      "chunk_path": "C:\\D drive\\New Python Journey geezzzz\\INConvo\\backend\\storage\\audio\\c17ba4490f7be26eb70bb41eb1747cd20fb8766c93f45877f537e82247c67c6d.wav"
+    },
+    {
+      "type": "pause",
+      "artist": null,
+      "artist_id": null,
+      "text": null,
+      "start_ms": 4270,
+      "end_ms": 4570,
+      "duration_ms": 300,
+      "source_start": null,
+      "source_end": null,
+      "chunk_path": null
+    },
+    {
+      "type": "dialogue",
+      "artist": "Artist2",
+      "artist_id": "aant6vd",
+      "text": "hello mera naam priya hai",
+      "start_ms": 4570,
+      "end_ms": 7210,
+      "duration_ms": 2640,
+      "source_start": 64,
+      "source_end": 90,
+      "chunk_path": "C:\\D drive\\New Python Journey geezzzz\\INConvo\\backend\\storage\\audio\\c75c2e2bb90ce00d1c460a2db139609aba04e6c780b2935a96d244c21b25aa68.wav"
+    }
+  ],
+  "artists": [
+    {
+      "id": "aob6mvc",
+      "name": "Artist1",
+      "voice_id": "aarav",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "aant6vd",
+      "name": "Artist2",
+      "voice_id": "priya",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "a65mx9c",
+      "name": "Artist3",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "aznf8nv",
+      "name": "Artist4",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "ai03eqs",
+      "name": "Artist5",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "a9v78mt",
+      "name": "Artist6",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    }
+  ],
+  "characters_submitted": 73,
+  "characters_cached": 0,
+  "characters_synthesized": 71,
+  "estimated_cost_inr": 0.1065
+}

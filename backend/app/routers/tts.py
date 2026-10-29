@@ -8,8 +8,11 @@ from pathlib import Path
 import os
 
 from ..database import get_db
-from ..models import Voice, AudioGeneration
+from ..models import Voice, AudioGeneration, User
 from ..services.audio_service import AudioService
+from ..services.quota_service import QuotaService
+from ..routers.auth import get_optional_user
+from ..routers.voices import PREMIUM_VOICE_IDS, PREMIUM_SPEAKER_NAMES
 from ..config import settings
 
 router = APIRouter(prefix="/api", tags=["TTS"])
@@ -47,30 +50,108 @@ class TTSResponse(BaseModel):
     pitch: float
     stability: float
     format: str
+    engine_used: str = "free"  # "premium" or "free"
+    fallback_reason: Optional[str] = None  # None, "trial_expired", "daily_limit", "total_limit", "provider_error", etc.
 
 @router.post("/tts", response_model=TTSResponse)
-async def generate_tts(req: TTSRequest, db: Session = Depends(get_db)):
-    # Validate voice exists
-    voice = db.query(Voice).filter(Voice.id == req.voice_id.lower()).first()
+async def generate_tts(
+    req: TTSRequest,
+    user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
+    clean_voice_id = req.voice_id.lower()
+
+    # Reject non-allowlisted premium voice IDs upfront
+    if (clean_voice_id.startswith("sarvam_") or req.provider == "sarvam") and (
+        clean_voice_id not in PREMIUM_VOICE_IDS and clean_voice_id not in PREMIUM_SPEAKER_NAMES
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Voice '{clean_voice_id}' is not in the curated premium voice allowlist."
+        )
+
+    # 1. Validate voice exists in DB
+    voice = db.query(Voice).filter(Voice.id == clean_voice_id).first()
     if not voice:
-        # Check if voices need to be seeded
         from .voices import seed_default_voices
         seed_default_voices(db)
-        voice = db.query(Voice).filter(Voice.id == req.voice_id.lower()).first()
+        voice = db.query(Voice).filter(Voice.id == clean_voice_id).first()
         if not voice:
             raise HTTPException(status_code=404, detail=f"Voice '{req.voice_id}' not found.")
 
-    provider_to_use = req.provider or voice.provider or settings.DEFAULT_PROVIDER
+    is_premium_requested = (voice.tier == "premium" or req.provider == "sarvam" or clean_voice_id.startswith("sarvam_"))
+    is_fish_requested = (voice.provider == "fish" or req.provider == "fish" or clean_voice_id.startswith("fish_"))
 
-    filename, file_url, duration, was_cached = await AudioService.generate_speech(
-        text=req.text,
-        voice_id=voice.id,
-        speed=req.speed,
-        pitch=req.pitch,
-        stability=req.stability,
-        audio_format=req.format,
-        provider_name=provider_to_use
-    )
+    # Server-side allowlist enforcement: Reject any non-allowlisted premium voice
+    if is_premium_requested and clean_voice_id not in PREMIUM_VOICE_IDS and clean_voice_id not in PREMIUM_SPEAKER_NAMES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Voice '{clean_voice_id}' is not in the curated premium voice allowlist."
+        )
+
+    requested_chars = len(req.text.strip())
+    engine_to_use = "free"
+    fallback_reason = None
+    target_provider = "mock"
+    target_voice_id = voice.id
+
+    if is_fish_requested:
+        target_provider = "fish"
+        target_voice_id = voice.id
+        engine_to_use = "fish_s2.1"
+    elif is_premium_requested:
+        is_eligible, ineligibility_reason = QuotaService.check_premium_eligibility(db, user, requested_chars)
+        if is_eligible:
+            engine_to_use = "premium"
+            target_provider = "sarvam"
+            target_voice_id = voice.id
+        else:
+            engine_to_use = "free"
+            fallback_reason = ineligibility_reason
+            target_provider = "mock"
+            # Map to matching free fallback voice if available
+            target_voice_id = "priya" if voice.gender == "female" else "neeraj"
+    else:
+        target_provider = req.provider or voice.provider or settings.DEFAULT_PROVIDER
+        target_voice_id = voice.id
+
+    # 2. Execute synthesis with automatic fallback
+    try:
+        filename, file_url, duration, was_cached = await AudioService.generate_speech(
+            text=req.text,
+            voice_id=target_voice_id,
+            speed=req.speed,
+            pitch=req.pitch,
+            stability=req.stability,
+            audio_format=req.format,
+            provider_name=target_provider
+        )
+    except Exception as exc:
+        # Graceful fallback: If premium synthesis errors, switch to Edge-TTS without deducting quota
+        if engine_to_use == "premium":
+            engine_to_use = "free"
+            fallback_reason = "provider_error"
+            fallback_voice = "priya" if voice.gender == "female" else "neeraj"
+            filename, file_url, duration, was_cached = await AudioService.generate_speech(
+                text=req.text,
+                voice_id=fallback_voice,
+                speed=req.speed,
+                pitch=req.pitch,
+                stability=req.stability,
+                audio_format=req.format,
+                provider_name="mock"
+            )
+        else:
+            raise exc
+
+    # 3. Quota deduction (only when NOT cached and user is authenticated)
+    if not was_cached and user:
+        QuotaService.deduct_quota_atomic(
+            db=db,
+            user_id=user.id,
+            engine_used=engine_to_use,
+            chars_synthesized=requested_chars
+        )
 
     download_url = f"/api/audio/{filename}?download=true"
 
@@ -81,12 +162,14 @@ async def generate_tts(req: TTSRequest, db: Session = Depends(get_db)):
         download_url=download_url,
         duration_seconds=duration,
         cached=was_cached,
-        ai_label="AI-Generated Voice (AwaazAI)",
+        ai_label=f"AI-Generated Voice ({engine_to_use.title()} Tier - AwaazAI)",
         voice=voice.to_dict(),
         speed=req.speed,
         pitch=req.pitch,
         stability=req.stability,
-        format=req.format
+        format=req.format,
+        engine_used=engine_to_use,
+        fallback_reason=fallback_reason
     )
 
 @router.get("/audio/{filename}")

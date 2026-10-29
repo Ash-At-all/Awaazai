@@ -1,6 +1,8 @@
 from typing import Dict, Type
 from .base import TTSProvider
 from .mock_provider import MockTTSProvider
+from .sarvam_provider import SarvamTTSProvider
+from .fish_audio_provider import FishAudioTTSProvider
 from ..config import settings
 
 class ProviderRegistry:
@@ -11,11 +13,15 @@ class ProviderRegistry:
         provider_name = (name or settings.DEFAULT_PROVIDER).lower().strip()
         
         if provider_name not in cls._providers:
-            if provider_name == "mock":
+            if provider_name == "sarvam":
+                cls._providers["sarvam"] = SarvamTTSProvider()
+            elif provider_name in ("fish", "fish_audio"):
+                cls._providers[provider_name] = FishAudioTTSProvider()
+            elif provider_name == "mock":
                 cls._providers["mock"] = MockTTSProvider()
             else:
-                # Default to mock provider for unknown/unconfigured providers in Phase 1
-                print(f"[ProviderRegistry] Provider '{provider_name}' not yet initialized, using mock.")
+                # Default to mock provider for unconfigured providers
+                print(f"[ProviderRegistry] Provider '{provider_name}' defaulting to mock.")
                 cls._providers[provider_name] = MockTTSProvider()
 
         return cls._providers[provider_name]

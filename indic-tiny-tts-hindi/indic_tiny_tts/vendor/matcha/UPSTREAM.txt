@@ -1,0 +1,43 @@
+Upstream: https://github.com/shivammehta25/Matcha-TTS  (MIT, LICENSE copied verbatim)
+Commit:   bd4d90d93214b37f7a159cf205ae85762c2c10aa  (default-branch HEAD fetched 2026-10-16)
+
+Files taken -> local name
+  matcha/models/components/text_encoder.py   -> text_encoder.py   (TextEncoder, RoPE Encoder, DurationPredictor, LayerNorm)
+  matcha/models/components/decoder.py        -> decoder.py        (U-Net Decoder, ResnetBlock1D, SinusoidalPosEmb, ...)
+  matcha/models/components/transformer.py    -> transformer.py    (BasicTransformerBlock, FeedForward, SnakeBeta)
+  matcha/models/components/flow_matching.py  -> flow_matching.py  (BASECFM, CFM)
+  matcha/utils/model.py (subset)             -> model_utils.py    (sequence_mask, fix_len_compatibility, convert_pad_shape,
+                                                                   generate_path, duration_loss)
+  matcha/utils/monotonic_align/core.pyx      -> monotonic_align_core.pyx.txt (reference only; NOT built. Our MAS is
+                                                                   tts/model/mas.py, parity-tested against a port of it)
+Not taken: matcha_tts.py (Lightning module; its forward/synthesise logic is re-done in tts/model/acoustic.py),
+           hydra configs, baselightningmodule, ONNX export, text frontends, hifigan.
+
+Local modifications (all marked "LOCAL MOD" in the code):
+  text_encoder.py
+    - imports: matcha.utils logger removed; einops replaced by view/transpose/permute (rearrange_bhtc).
+    - LayerNorm: statistics computed in fp32 (x.float()); output is fp32 (fp16 AMP overflow safety).
+    - MultiHeadAttention.attention: RoPE, q.k^T scores, masking and softmax run in fp32 with autocast disabled;
+      p_attn cast back to value dtype for the value matmul.
+    - RotaryPositionalEmbeddings._build_cache: cache is also rebuilt when the input device changes.
+    - TextEncoder accepts plain dicts for encoder_params / duration_predictor_params (_attrs helper).
+  transformer.py
+    - `diffusers` dependency removed: minimal re-implementations of Attention (self-attn, SDPA), GELU, GEGLU,
+      ApproximateGELU; LoRACompatibleLinear = nn.Linear; maybe_allow_in_graph = identity. Parameter names/shapes
+      identical to diffusers (to_q/to_k/to_v/to_out.0), so parameter counts match upstream.
+    - Attention masking: upstream passed the decoder's 0/1 float mask through diffusers' AttnProcessor2_0, where it
+      becomes an ADDITIVE bias (+1 on valid keys, 0 on padding), i.e. padding was effectively not masked. Here the
+      mask is a boolean key-padding mask (padded keys excluded). Behaviour differs only for padded positions.
+    - AdaLayerNorm / AdaLayerNormZero (unused by Matcha) raise NotImplementedError.
+  decoder.py
+    - `conformer` / `diffusers` / `einops` imports removed: ConformerWrapper deleted (only block type
+      "transformer" supported); get_activation -> small local table; pack/repeat/rearrange -> torch.cat /
+      expand / transpose / squeeze. The spks vector is cast to x's dtype before concatenation.
+  flow_matching.py
+    - pylogger removed; cfm_params may be a dict; forward uses @torch.no_grad (was inference_mode) and takes an
+      optional torch.Generator for reproducible noise; compute_loss takes an optional generator, draws t and z in
+      fp32, passes t.view(b) (was t.squeeze(), which breaks for batch 1) and reduces the MSE in fp32 with autocast
+      disabled, masking padded frames (upstream summed -z^2 constants over padded frames: same gradients, different
+      loss value).
+  model_utils.py
+    - normalize/denormalize dropped; fix_len_compatibility accepts python ints and returns an int (ONNX branch kept).

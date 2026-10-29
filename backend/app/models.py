@@ -21,6 +21,8 @@ class Voice(Base):
     consent_proof_url = Column(String, nullable=False)  # Required
     is_published = Column(Boolean, default=True)
     avatar_color = Column(String, default="from-amber-500 to-orange-600")
+    tier = Column(String, default="free", nullable=False)  # "free" or "premium"
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def to_dict(self):
@@ -41,6 +43,8 @@ class Voice(Base):
             "consent_proof_url": self.consent_proof_url,
             "is_published": self.is_published,
             "avatar_color": self.avatar_color,
+            "tier": self.tier or "free",
+            "is_active": self.is_active if self.is_active is not None else True,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -48,6 +52,7 @@ class AudioGeneration(Base):
     __tablename__ = "audio_generations"
 
     id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, index=True, nullable=True)  # Nullable for anonymous/legacy generations
     voice_id = Column(String, index=True)
     text = Column(Text, nullable=False)
     normalized_text = Column(Text, default="")
@@ -60,7 +65,57 @@ class AudioGeneration(Base):
     stability = Column(Float, default=0.5)
     duration_seconds = Column(Float, default=0.0)
     is_conversation = Column(Boolean, default=False)
+    engine_used = Column(String, default="free")  # "premium" or "free"
+    fallback_reason = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    normalized_email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role = Column(String, default="user", nullable=False)  # "user" or "admin"
+    is_verified = Column(Boolean, default=False, nullable=False)
+    verification_token = Column(String, nullable=True, index=True)
+    verification_token_expires_at = Column(DateTime, nullable=True)
+    trial_started_at = Column(DateTime, nullable=True)
+    trial_ends_at = Column(DateTime, nullable=True)
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "email": self.email,
+            "role": self.role,
+            "is_verified": self.is_verified,
+            "trial_started_at": self.trial_started_at.isoformat() if self.trial_started_at else None,
+            "trial_ends_at": self.trial_ends_at.isoformat() if self.trial_ends_at else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+class UserQuota(Base):
+    __tablename__ = "user_quotas"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String, index=True, nullable=False)
+    date = Column(String, index=True, nullable=False)  # UTC date "YYYY-MM-DD"
+    daily_premium_chars_used = Column(Integer, default=0, nullable=False)
+    total_premium_chars_used = Column(Integer, default=0, nullable=False)
+    daily_free_chars_used = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class GlobalSpend(Base):
+    __tablename__ = "global_spend"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    date = Column(String, unique=True, index=True, nullable=False)  # UTC date "YYYY-MM-DD"
+    total_spend_inr = Column(Float, default=0.0, nullable=False)
+    total_chars_synthesized = Column(Integer, default=0, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class PronunciationRule(Base):
     __tablename__ = "pronunciation_rules"

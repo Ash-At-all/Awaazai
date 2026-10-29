@@ -67,6 +67,8 @@ def test_tts_input_validation():
     res = client.post("/api/tts", json={"text": "Test", "voice_id": "neeraj", "format": "exe"})
     assert res.status_code == 422
 
+from unittest.mock import patch, AsyncMock
+
 def test_tts_generation_and_caching():
     req_body = {
         "text": "सुरक्षा और निष्पादन परीक्षण संपन्न हुआ।",
@@ -81,7 +83,8 @@ def test_tts_generation_and_caching():
     assert res1.status_code == 200
     data1 = res1.json()
     assert "audio_url" in data1
-    assert data1["ai_label"] == "AI-Generated Voice (AwaazAI)"
+    assert "AI-Generated Voice" in data1["ai_label"]
+    assert "AwaazAI" in data1["ai_label"]
     filename = data1["filename"]
 
     # Verify audio file retrieval
@@ -97,12 +100,14 @@ def test_tts_generation_and_caching():
     assert data2["cached"] is True
     assert data2["filename"] == filename
 
-def test_rate_limiter_enforcement():
+@patch("app.services.audio_service.AudioService.generate_speech", new_callable=AsyncMock)
+def test_rate_limiter_enforcement(mock_gen):
+    mock_gen.return_value = ("rate_mock.wav", "/api/audio/rate_mock.wav", 1.0, True)
     # Trigger repeated requests to test throttle threshold
     exceeded = False
-    for i in range(40):
+    for i in range(70):
         res = client.post("/api/tts", json={
-            "text": f"Request {i}",
+            "text": f"Flood probe line {i}",
             "voice_id": "neeraj"
         })
         if res.status_code == 429:

@@ -4,6 +4,7 @@ import os
 import subprocess
 import json
 import wave
+import unicodedata
 from pathlib import Path
 from typing import Optional, Tuple
 from datetime import datetime
@@ -22,8 +23,18 @@ class AudioService:
         audio_format: str = "wav",
         provider: str = "mock"
     ) -> str:
-        clean_text = text.strip()
-        raw = f"{provider}:{voice_id}:{clean_text}:{speed:.2f}:{pitch:.2f}:{stability:.2f}:{audio_format}"
+        """
+        Canonical cache key representation containing:
+        - provider
+        - voice_id
+        - Unicode NFC-normalized trimmed text
+        - delivery settings: speed (2-dec), pitch (2-dec), stability (2-dec)
+        - audio format
+        Invariance guarantee: Unrelated lines, artist order, or external metadata
+        do not affect this key.
+        """
+        clean_text = unicodedata.normalize("NFC", text.strip())
+        raw = f"{provider.lower()}:{voice_id.lower()}:{clean_text}:{speed:.2f}:{pitch:.2f}:{stability:.2f}:{audio_format.lower()}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
     @staticmethod
@@ -86,7 +97,8 @@ class AudioService:
         provider_name: Optional[str] = None
     ) -> Tuple[str, str, float, bool]:
         """
-        Synthesize speech, utilize hash caching, apply AI metadata, and return (filename, file_url, duration, was_cached).
+        Synthesize speech, utilize canonical hash caching, apply AI metadata, and return (filename, file_url, duration, was_cached).
+        Thread/process-safe via atomic rename of temporary staging files.
         """
         provider = get_tts_provider(provider_name)
         active_provider_name = provider.name
@@ -120,8 +132,8 @@ class AudioService:
             audio_format=audio_format
         )
 
-        # 3. Save atomically via temporary file to prevent partial file read races
-        temp_file = settings.AUDIO_DIR / f".tmp_{filename}"
+        # 3. Save atomically via unique pid-tagged temporary file to prevent partial file read races
+        temp_file = settings.AUDIO_DIR / f".tmp_{os.getpid()}_{cache_hash}.{audio_format.lower()}"
         with open(temp_file, "wb") as f:
             f.write(raw_audio)
 

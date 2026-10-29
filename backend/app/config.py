@@ -27,10 +27,28 @@ class Settings:
     AZURE_SPEECH_REGION: str = os.getenv("AZURE_SPEECH_REGION", "centralindia")
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
     GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+    FISH_AUDIO_API_KEY: str = os.getenv("FISH_AUDIO_API_KEY", "")
     
     # Rate Limiting & Limits
     MAX_CHAR_LIMIT: int = int(os.getenv("MAX_CHAR_LIMIT", "2500"))
     RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+    
+    # 30-Day Premium Trial & Quota Settings
+    TRIAL_DAYS: int = int(os.getenv("TRIAL_DAYS", "30"))
+    TRIAL_TOTAL_PREMIUM_CHARS: int = int(os.getenv("TRIAL_TOTAL_PREMIUM_CHARS", "10000"))
+    TRIAL_DAILY_PREMIUM_CHARS: int = int(os.getenv("TRIAL_DAILY_PREMIUM_CHARS", "1000"))
+    MAX_CHARS_PER_REQUEST_PREMIUM: int = int(os.getenv("MAX_CHARS_PER_REQUEST_PREMIUM", "500"))
+    MAX_CHARS_PER_REQUEST_FREE: int = int(os.getenv("MAX_CHARS_PER_REQUEST_FREE", "2500"))
+    FREE_FALLBACK_DAILY_CHARS: int = int(os.getenv("FREE_FALLBACK_DAILY_CHARS", "3000"))
+    
+    # Global Spend Guard & Kill Switch
+    GLOBAL_DAILY_PREMIUM_SPEND_CAP_INR: float = float(os.getenv("GLOBAL_DAILY_PREMIUM_SPEND_CAP_INR", "500.0"))
+    PREMIUM_KILL_SWITCH: bool = os.getenv("PREMIUM_KILL_SWITCH", "False").lower() in ("true", "1")
+    
+    # Auth & Sessions
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "awaazai-production-grade-jwt-secret-key-replace-in-env")
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
     
     # CORS
     CORS_ORIGINS: list[str] = [

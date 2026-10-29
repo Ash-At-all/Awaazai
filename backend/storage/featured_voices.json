@@ -1,0 +1,46 @@
+[
+  {
+    "id": "fish_narration",
+    "name": "Narration",
+    "voice_id": "0de8162a9e384545a0106046b57488a7",
+    "provider": "fish_audio",
+    "label": "Deep, Expressive Storytelling",
+    "sample_text": "नमस्ते, आवाज़ एआई में आपका स्वागत है। चलिए एक नई और शानदार कहानी की शुरुआत करते हैं।",
+    "image_url": "",
+    "order": 1,
+    "active": true
+  },
+  {
+    "id": "fish_indian_girl",
+    "name": "Indian Girl (19)",
+    "voice_id": "2b9e2a84cb664489a7ab9ca71af5dff5",
+    "provider": "fish_audio",
+    "label": "Indian girl, 19 years — Sweet & Conversational",
+    "sample_text": "हेलो, आवाज़ एआई पर आपका स्वागत है! क्या आज हम कुछ नया और एक्साइटिंग बनाएं?",
+    "image_url": "",
+    "order": 2,
+    "active": true
+  },
+  {
+    "id": "fish_gojo",
+    "name": "Gojo",
+    "voice_id": "528f686ef2154885b368dd4b93fb8728",
+    "provider": "fish_audio",
+    "label": "Gojo-style character — Cool & Heroic",
+    "sample_text": "फिक्र मत करो, जब तक मैं यहाँ हूँ, सब एकदम परफेक्ट होगा!",
+    "image_url": "",
+    "order": 3,
+    "active": true
+  },
+  {
+    "id": "fish_funny_man",
+    "name": "Funny Man",
+    "voice_id": "d219c65920e540509486a30373f5c5c0",
+    "provider": "fish_audio",
+    "label": "Middle-aged funny man — Humorous & Lively",
+    "sample_text": "अरे अरे भाई साहब! मुस्कुराइए, क्योंकि अब आवाज़ एआई का जलवा शुरू होने वाला है!",
+    "image_url": "",
+    "order": 4,
+    "active": true
+  }
+]

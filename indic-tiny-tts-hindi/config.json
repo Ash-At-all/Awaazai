@@ -1,0 +1,198 @@
+{
+ "format": "indic-tiny-tts/1",
+ "language": "hi",
+ "sample_rate": 24000,
+ "voices": {
+  "female": "hi_F",
+  "male": "hi_M"
+ },
+ "default_voice": "female",
+ "model_cfg": {
+  "n_feats": 100,
+  "cond": {
+   "lang_dim": 32,
+   "spk_dim": 64,
+   "style_dim": 16
+  },
+  "encoder": {
+   "n_channels": 128,
+   "filter_channels": 256,
+   "filter_channels_dp": 192,
+   "n_heads": 2,
+   "n_layers": 6,
+   "kernel_size": 3,
+   "p_dropout": 0.1,
+   "prenet": true
+  },
+  "duration_predictor": {
+   "kernel_size": 3,
+   "p_dropout": 0.1
+  },
+  "decoder": {
+   "channels": [
+    160,
+    160
+   ],
+   "dropout": 0.05,
+   "attention_head_dim": 64,
+   "n_blocks": 1,
+   "num_mid_blocks": 2,
+   "num_heads": 2,
+   "act_fn": "snakebeta"
+  },
+  "cfm": {
+   "solver": "euler",
+   "sigma_min": 0.0001
+  },
+  "prior_loss": true,
+  "mas_impl": "auto"
+ },
+ "mel_stats": [
+  -1.73840439356988,
+  2.352135264770519
+ ],
+ "vocab": {
+  "mode": "chr",
+  "add_blank": true,
+  "symbols": [
+   "<blank>",
+   "<unk>",
+   "c: ",
+   "c:!",
+   "c:\"",
+   "c:'",
+   "c:(",
+   "c:)",
+   "c:,",
+   "c:-",
+   "c:.",
+   "c:?",
+   "c:ँ",
+   "c:ं",
+   "c:ः",
+   "c:अ",
+   "c:आ",
+   "c:इ",
+   "c:ई",
+   "c:उ",
+   "c:ऊ",
+   "c:ऋ",
+   "c:ऍ",
+   "c:ए",
+   "c:ऐ",
+   "c:ऑ",
+   "c:ओ",
+   "c:औ",
+   "c:क",
+   "c:ख",
+   "c:ग",
+   "c:घ",
+   "c:ङ",
+   "c:च",
+   "c:छ",
+   "c:ज",
+   "c:झ",
+   "c:ञ",
+   "c:ट",
+   "c:ठ",
+   "c:ड",
+   "c:ढ",
+   "c:ण",
+   "c:त",
+   "c:थ",
+   "c:द",
+   "c:ध",
+   "c:न",
+   "c:ऩ",
+   "c:प",
+   "c:फ",
+   "c:ब",
+   "c:भ",
+   "c:म",
+   "c:य",
+   "c:र",
+   "c:ऱ",
+   "c:ल",
+   "c:व",
+   "c:श",
+   "c:ष",
+   "c:स",
+   "c:ह",
+   "c:़",
+   "c:ा",
+   "c:ि",
+   "c:ी",
+   "c:ु",
+   "c:ू",
+   "c:ृ",
+   "c:ॄ",
+   "c:ॅ",
+   "c:े",
+   "c:ै",
+   "c:ॉ",
+   "c:ो",
+   "c:ौ",
+   "c:्",
+   "c:।",
+   "c:–",
+   "c:—",
+   "c:‘",
+   "c:’",
+   "c:“",
+   "c:”"
+  ],
+  "normalizer": "textnorm",
+  "normalization_version": "4",
+  "hash": "beab22b4be22bb49",
+  "inherited_from": "textnorm@2 (identical char output on all 10,417 hi pilot rows under textnorm@4)",
+  "verified": {
+   "index": "pilot.parquet",
+   "rows": 10417,
+   "rows_with_unknown": 0,
+   "normalization_version": "4"
+  }
+ },
+ "synthesis": {
+  "n_timesteps": 4,
+  "temperature": 0.667,
+  "style": "read",
+  "sentence_pause_s": 0.15,
+  "length_scale": {
+   "hi_F": 1.0,
+   "hi_M": 1.0
+  }
+ },
+ "vocoder": {
+  "backbone": {
+   "input_channels": 100,
+   "dim": 512,
+   "intermediate_dim": 1536,
+   "num_layers": 8
+  },
+  "head": {
+   "dim": 512,
+   "n_fft": 1024,
+   "hop_length": 256,
+   "padding": "center"
+  },
+  "source": "charactr/vocos-mel-24khz@0feb3fdd929bcd6649e0e7c5a688cf7dd012ef21"
+ },
+ "params": {
+  "acoustic": 8933641,
+  "vocoder": 13531650,
+  "total": 22465291
+ },
+ "provenance": {
+  "checkpoint": "hf:B-hi-P1b-v2/milestones/ms_00145000.pt",
+  "train_repo": "sulabhkatiyar/indic-tts-mini-train",
+  "step": 145000,
+  "weights": "EMA",
+  "run_name": "B-hi-P1b-v2",
+  "train_code_sha": "25a9ed225208a7eb27396fb742a3592e76d26ecc",
+  "index_sha": "0e33c51efce7c482",
+  "trained_voices": [
+   "hi_F",
+   "hi_M"
+  ]
+ }
+}

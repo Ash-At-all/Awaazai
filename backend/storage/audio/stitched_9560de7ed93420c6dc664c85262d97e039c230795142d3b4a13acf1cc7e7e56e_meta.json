@@ -1,0 +1,64 @@
+{
+  "id": "stitched_9560de7ed93420c6dc664c85262d97e039c230795142d3b4a13acf1cc7e7e56e",
+  "format": "wav",
+  "duration_seconds": 3.83,
+  "duration_ms": 3830,
+  "segments": [
+    {
+      "type": "dialogue",
+      "artist": "Artist1",
+      "artist_id": "a1",
+      "text": "??????! ?? ?? ?????? ??????",
+      "start_ms": 0,
+      "end_ms": 1840,
+      "duration_ms": 1840,
+      "source_start": 8,
+      "source_end": 37,
+      "chunk_path": "C:\\D drive\\New Python Journey geezzzz\\INConvo\\backend\\storage\\audio\\8d5cb4cac38da78e79c65e804bc2f8438840bbf042c5e49324f6987c2843a9d5.wav"
+    },
+    {
+      "type": "pause",
+      "artist": null,
+      "artist_id": null,
+      "text": null,
+      "start_ms": 1840,
+      "end_ms": 2240,
+      "duration_ms": 400,
+      "source_start": 37,
+      "source_end": 50,
+      "chunk_path": null
+    },
+    {
+      "type": "dialogue",
+      "artist": "Artist2",
+      "artist_id": "a2",
+      "text": "???????, ???? ?????? ??????",
+      "start_ms": 2240,
+      "end_ms": 3790,
+      "duration_ms": 1550,
+      "source_start": 59,
+      "source_end": 87,
+      "chunk_path": "C:\\D drive\\New Python Journey geezzzz\\INConvo\\backend\\storage\\audio\\ce1b7b65b1a7f4ffbd213c91cf5420443097c91e24ac9bd15a6bb933e5a06e16.wav"
+    }
+  ],
+  "artists": [
+    {
+      "id": "a1",
+      "name": "Artist1",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "a2",
+      "name": "Artist2",
+      "voice_id": "priya",
+      "speed": 0,
+      "stability": 0.5
+    }
+  ],
+  "characters_submitted": 57,
+  "characters_cached": 0,
+  "characters_synthesized": 54,
+  "estimated_cost_inr": 0.081
+}

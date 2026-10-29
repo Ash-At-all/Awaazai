@@ -1,0 +1,14 @@
+Upstream: https://github.com/gemelo-ai/vocos  (MIT, LICENSE copied verbatim)
+Commit:   eb39abfc42c1dee4854d9b10d44dd7d4fd3b0e53  (default-branch HEAD fetched 2026-10-16)
+Pretrained weights used with it: https://huggingface.co/charactr/vocos-mel-24khz (MIT), snapshot
+  0feb3fdd929bcd6649e0e7c5a688cf7dd012ef21 (config.yaml: VocosBackbone dim 512 / inter 1536 / 8 layers,
+  ISTFTHead n_fft 1024 hop 256 padding "center"). Trained on LibriTTS (CC-BY-4.0).
+
+Files taken -> local name
+  vocos/models.py        -> models.py        (Backbone, VocosBackbone, VocosResNetBackbone)  import path changed only
+  vocos/modules.py       -> modules.py       (ConvNeXtBlock, AdaLayerNorm, ResBlock1, safe_log, ...) unmodified
+  vocos/heads.py         -> heads.py         FourierHead + ISTFTHead only; IMDCT heads and their torchaudio import removed
+  vocos/spectral_ops.py  -> spectral_ops.py  ISTFT only; MDCT/IMDCT (and numpy/scipy imports) removed
+Not taken: feature_extractors.py (torchaudio/encodec; our mel is tts/data/mel.py), pretrained.py (loader re-done in
+tts/model/vocoder.py: strict load of backbone.* / head.* keys, feature_extractor.* keys dropped), discriminators,
+losses, experiment, dataset (to be vendored by the vocoder fine-tune module if needed).

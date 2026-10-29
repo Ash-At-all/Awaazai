@@ -1,12 +1,15 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
 from .config import settings
 from .database import engine, Base
-from .routers import voices, tts
+from .migrations import run_migrations
+from .routers import voices, tts, script_tts, auth, featured_voices
 from .security import RateLimitMiddleware, SecurityHeadersMiddleware
 
-# Initialize database schema
-Base.metadata.create_all(bind=engine)
+# Initialize and migrate database schema safely
+run_migrations()
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -29,13 +32,21 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
 )
 
+# Static Uploads directory
+uploads_dir = Path(settings.STORAGE_DIR) / "uploads"
+uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
 # Include Routers
+app.include_router(auth.router)
 app.include_router(voices.router)
 app.include_router(tts.router)
+app.include_router(script_tts.router)
+app.include_router(featured_voices.router)
 
 @app.get("/")
 def read_root():

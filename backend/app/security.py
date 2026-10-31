@@ -60,6 +60,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     Enforces essential HTTP security headers across all API responses.
     """
     async def dispatch(self, request: Request, call_next):
+        if request.url.path in ("/docs", "/openapi.json"):
+            return await call_next(request)
+
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"

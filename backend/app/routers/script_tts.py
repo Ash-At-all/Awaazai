@@ -162,7 +162,7 @@ def estimate_script_tts(
             cfg = next((a for a in req.artists if a.id == seg.artist_id), None)
             if cfg and cfg.voice_id in voice_lookup:
                 v = voice_lookup[cfg.voice_id]
-                if v.tier == "premium" or cfg.voice_id.startswith("sarvam_"):
+                if v.tier in ("premium", "featured") or v.provider in ("sarvam", "elevenlabs", "fish") or cfg.voice_id.startswith(("sarvam_", "eleven_", "fish_")):
                     premium_chars += len(seg.text.strip())
 
     is_eligible = True
@@ -257,7 +257,7 @@ async def generate_script_tts(
             cfg = artist_config[seg.artist_id]
             v = voice_lookup[cfg.voice_id]
             clean_vid = cfg.voice_id.lower()
-            if v.tier == "premium" or clean_vid.startswith("sarvam_"):
+            if v.tier in ("premium", "featured") or v.provider in ("sarvam", "elevenlabs", "fish") or clean_vid.startswith(("sarvam_", "eleven_", "fish_")):
                 has_premium_artist = True
                 if clean_vid not in PREMIUM_VOICE_IDS and clean_vid not in PREMIUM_SPEAKER_NAMES:
                     raise HTTPException(
@@ -311,11 +311,11 @@ async def generate_script_tts(
             cfg = artist_config[seg.artist_id]
             voice = voice_lookup[cfg.voice_id]
             clean_vid = cfg.voice_id.lower()
-            is_artist_premium = (voice.tier == "premium" or clean_vid.startswith("sarvam_"))
+            is_artist_premium = (voice.tier in ("premium", "featured") or voice.provider in ("sarvam", "elevenlabs", "fish") or clean_vid.startswith(("sarvam_", "eleven_", "fish_")))
 
             if is_artist_premium and script_engine == "premium":
-                provider_name = "sarvam"
-                voice_id_to_use = cfg.voice_id
+                provider_name = voice.provider if voice.provider in ("sarvam", "elevenlabs", "fish") else "sarvam"
+                voice_id_to_use = voice.provider_voice_id if provider_name in ("sarvam", "elevenlabs", "fish") else cfg.voice_id
             else:
                 provider_name = "mock"
                 voice_id_to_use = "priya" if voice.gender == "female" else "neeraj"

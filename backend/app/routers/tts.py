@@ -62,7 +62,7 @@ async def generate_tts(
     clean_voice_id = req.voice_id.lower()
 
     # Reject non-allowlisted premium voice IDs upfront
-    if (clean_voice_id.startswith("sarvam_") or req.provider == "sarvam") and (
+    if (clean_voice_id.startswith("sarvam_") or clean_voice_id.startswith("eleven_") or req.provider in ("sarvam", "elevenlabs")) and (
         clean_voice_id not in PREMIUM_VOICE_IDS and clean_voice_id not in PREMIUM_SPEAKER_NAMES
     ):
         raise HTTPException(
@@ -79,7 +79,7 @@ async def generate_tts(
         if not voice:
             raise HTTPException(status_code=404, detail=f"Voice '{req.voice_id}' not found.")
 
-    is_premium_requested = (voice.tier == "premium" or req.provider == "sarvam" or clean_voice_id.startswith("sarvam_"))
+    is_premium_requested = (voice.tier == "premium" or req.provider in ("sarvam", "elevenlabs") or clean_voice_id.startswith(("sarvam_", "eleven_")))
     is_fish_requested = (voice.provider == "fish" or req.provider == "fish" or clean_voice_id.startswith("fish_"))
 
     # Server-side allowlist enforcement: Reject any non-allowlisted premium voice
@@ -97,14 +97,14 @@ async def generate_tts(
 
     if is_fish_requested:
         target_provider = "fish"
-        target_voice_id = voice.id
+        target_voice_id = voice.provider_voice_id
         engine_to_use = "fish_s2.1"
     elif is_premium_requested:
         is_eligible, ineligibility_reason = QuotaService.check_premium_eligibility(db, user, requested_chars)
         if is_eligible:
             engine_to_use = "premium"
-            target_provider = "sarvam"
-            target_voice_id = voice.id
+            target_provider = voice.provider if voice.provider in ("sarvam", "elevenlabs") else "sarvam"
+            target_voice_id = voice.provider_voice_id if target_provider in ("sarvam", "elevenlabs") else voice.id
         else:
             engine_to_use = "free"
             fallback_reason = ineligibility_reason
@@ -113,7 +113,7 @@ async def generate_tts(
             target_voice_id = "priya" if voice.gender == "female" else "neeraj"
     else:
         target_provider = req.provider or voice.provider or settings.DEFAULT_PROVIDER
-        target_voice_id = voice.id
+        target_voice_id = voice.provider_voice_id
 
     # 2. Execute synthesis with automatic fallback
     try:

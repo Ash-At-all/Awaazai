@@ -1,8 +1,10 @@
 import re
+import hashlib
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, field_validator
 from pathlib import Path
 import os
 
@@ -10,12 +12,41 @@ from ..database import get_db
 from ..models import Voice
 from ..providers.factory import get_tts_provider
 from ..providers.fish_audio_provider import FISH_FEATURED_VOICES
+from ..providers.elevenlabs_provider import ELEVEN_FEATURED_VOICES
 from ..services.audio_service import AudioService
 from ..config import settings
+from .auth import require_admin
 
 router = APIRouter(prefix="/api/voices", tags=["Voices"])
 
 VOICE_ID_REGEX = re.compile(r"^[a-z0-9_-]{1,50}$")
+PROVIDER_VOICE_ID_REGEX = re.compile(r"^[A-Za-z0-9_.:-]{1,120}$")
+
+
+class AdminVoiceUpdate(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=1, max_length=100)
+    provider: Optional[Literal["mock", "sarvam", "elevenlabs", "fish"]] = None
+    provider_voice_id: Optional[str] = Field(None, min_length=1, max_length=120)
+    gender: Optional[Literal["male", "female"]] = None
+    age_style: Optional[str] = Field(None, max_length=50)
+    tone: Optional[str] = Field(None, max_length=50)
+    language: Optional[str] = Field(None, max_length=100)
+    accent: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = Field(None, max_length=600)
+    sample_text: Optional[str] = Field(None, max_length=500)
+    license_type: Optional[str] = Field(None, max_length=150)
+    consent_proof_url: Optional[str] = Field(None, max_length=500)
+    avatar_color: Optional[str] = Field(None, max_length=100)
+    tier: Optional[Literal["free", "premium", "featured"]] = None
+    is_published: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+    @field_validator("provider_voice_id")
+    @classmethod
+    def validate_provider_voice_id(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and not PROVIDER_VOICE_ID_REGEX.fullmatch(value.strip()):
+            raise ValueError("Voice ID may contain letters, numbers, dot, underscore, colon, or hyphen.")
+        return value.strip() if value is not None else None
 
 CURATED_PREMIUM_VOICES = [
     {
@@ -187,14 +218,52 @@ CURATED_PREMIUM_VOICES = [
         "consent_proof_url": "https://awaazai.com/legal/consent/sarvam-shreya",
         "tier": "premium",
         "avatar_color": "from-amber-600 to-yellow-600"
+    },
+    {
+        "id": "fish_motu",
+        "display_name": "MOTU Fish Voice",
+        "provider": "fish",
+        "provider_voice_id": "fish_motu",
+        "gender": "male",
+        "age_style": "young adult",
+        "tone": "conversational",
+        "language": "Hindi / Hinglish",
+        "accent": "Studio Standard",
+        "description": "Fish Audio featured voice ideal for music production and voiceover work.",
+        "sample_text": "नमस्ते, मैं एमोटू फिश की आवाज़ हूँ, यहाँ गुणवत्तापूर्ण ऑडियो निर्माण शुरू करते हैं।",
+        "license_type": "Fish Audio Platform",
+        "consent_proof_url": "https://fish.audio",
+        "tier": "premium",
+        "avatar_color": "from-green-500 to-emerald-700"
     }
-]
+    ]
 
-PREMIUM_VOICE_IDS = {v["id"] for v in CURATED_PREMIUM_VOICES}
-PREMIUM_SPEAKER_NAMES = {v["provider_voice_id"] for v in CURATED_PREMIUM_VOICES}
+# ElevenLabs voices are curated in the provider module and seeded into the
+# public catalog so the normal sample and TTS routes can resolve them.
+for _voice in ELEVEN_FEATURED_VOICES:
+    CURATED_PREMIUM_VOICES.append({
+        "id": _voice["id"],
+        "display_name": _voice["display_name"],
+        "provider": "elevenlabs",
+        "provider_voice_id": _voice["voice_id"],
+        "gender": _voice["gender"],
+        "age_style": _voice["age_style"],
+        "tone": _voice["tone"],
+        "language": _voice["language"],
+        "accent": _voice["accent"],
+        "description": _voice["description"],
+        "sample_text": _voice["sample_text"],
+        "license_type": "ElevenLabs - AwaazAI Premium",
+        "consent_proof_url": "https://elevenlabs.io/terms",
+        "tier": "premium",
+        "avatar_color": _voice["avatar_color"],
+    })
+
+PREMIUM_VOICE_IDS = {v["id"] for v in CURATED_PREMIUM_VOICES} | {v["id"] for v in FISH_FEATURED_VOICES}
+PREMIUM_SPEAKER_NAMES = {v["provider_voice_id"] for v in CURATED_PREMIUM_VOICES} | {v["reference_id"] for v in FISH_FEATURED_VOICES}
 
 def seed_default_voices(db: Session):
-    """Seed the database with free and exactly 10 premium Indian voices."""
+    """Seed free voices, curated premium voices, and Fish Audio featured voices."""
     # 1. Seed Free Voices if missing
     existing_ids = {r[0] for r in db.query(Voice.id).all()}
     
@@ -225,7 +294,7 @@ def seed_default_voices(db: Session):
             db.add(voice)
             existing_ids.add(v["id"])
 
-    # 2. Seed Exactly 10 Premium Voices
+    # Add newly curated voices while preserving any admin edits to existing rows.
     for pv in CURATED_PREMIUM_VOICES:
         if pv["id"] not in existing_ids:
             voice = Voice(
@@ -245,11 +314,15 @@ def seed_default_voices(db: Session):
                 consent_proof_url=pv["consent_proof_url"],
                 is_published=True,
                 avatar_color=pv["avatar_color"],
-                tier="premium",
-                is_active=True
+                tier=pv["tier"],
+                is_active=True,
             )
             db.add(voice)
             existing_ids.add(pv["id"])
+
+    # Remove outdated ElevenLabs presets that are no longer on this account.
+    for old_id in ("eleven_rachel", "eleven_josh", "eleven_elli", "eleven_antoni", "eleven_bella"):
+        db.query(Voice).filter(Voice.id == old_id).update({Voice.is_active: False}, synchronize_session=False)
 
     # 3. Seed Fish Audio Featured Voices
     for fv in FISH_FEATURED_VOICES:
@@ -276,15 +349,6 @@ def seed_default_voices(db: Session):
             )
             db.add(voice)
             existing_ids.add(fv["id"])
-        else:
-            # Sync updated sample_text and descriptions if already seeded
-            v_obj = db.query(Voice).filter(Voice.id == fv["id"]).first()
-            if v_obj:
-                v_obj.sample_text = fv["sample_text"]
-                v_obj.description = fv["description"]
-                v_obj.tone = fv["tone"]
-                v_obj.accent = fv["accent"]
-    
     db.commit()
 
 @router.get("")
@@ -323,6 +387,37 @@ def list_voices(
     voices = query.all()
     return [v.to_dict() for v in voices]
 
+
+@router.get("/admin/catalog")
+def admin_list_voices(db: Session = Depends(get_db), admin_user=Depends(require_admin)):
+    """Return the full catalog, including hidden voices, for administrators."""
+    seed_default_voices(db)
+    voices = db.query(Voice).order_by(Voice.provider, Voice.display_name).all()
+    return [voice.to_dict() for voice in voices]
+
+
+@router.put("/admin/{voice_id}")
+def admin_update_voice(
+    voice_id: str,
+    req: AdminVoiceUpdate,
+    db: Session = Depends(get_db),
+    admin_user=Depends(require_admin),
+):
+    clean_id = voice_id.lower().strip()
+    if not VOICE_ID_REGEX.fullmatch(clean_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid voice ID format.")
+    voice = db.query(Voice).filter(Voice.id == clean_id).first()
+    if not voice:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Voice not found.")
+
+    changes = req.model_dump(exclude_unset=True, exclude_none=True)
+    for field, value in changes.items():
+        setattr(voice, field, value.strip() if isinstance(value, str) else value)
+    voice.sample_url = f"/api/voices/{voice.id}/sample"
+    db.commit()
+    db.refresh(voice)
+    return voice.to_dict()
+
 @router.get("/{voice_id}")
 def get_voice(voice_id: str, db: Session = Depends(get_db)):
     clean_id = voice_id.lower().strip()
@@ -347,7 +442,8 @@ async def get_voice_sample(voice_id: str, db: Session = Depends(get_db)):
         if not voice:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Voice '{voice_id}' not found.")
 
-    sample_filename = f"sample_{voice.id}.wav"
+    voice_revision = hashlib.sha256(f"{voice.provider}:{voice.provider_voice_id}:{voice.sample_text}".encode()).hexdigest()[:10]
+    sample_filename = f"sample_{voice.id}_{voice_revision}.wav"
     base_dir = settings.SAMPLE_DIR.resolve()
     sample_path = (base_dir / sample_filename).resolve()
 
@@ -355,15 +451,20 @@ async def get_voice_sample(voice_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
     if not sample_path.exists() or sample_path.stat().st_size == 0:
-        filename, _, _, _ = await AudioService.generate_speech(
-            text=voice.sample_text,
-            voice_id=voice.id,
-            speed=1.0,
-            pitch=1.0,
-            stability=0.5,
-            audio_format="wav",
-            provider_name=voice.provider
-        )
+        try:
+            filename, _, _, _ = await AudioService.generate_speech(
+                text=voice.sample_text,
+                voice_id=voice.provider_voice_id,
+                speed=1.0,
+                pitch=1.0,
+                stability=0.5,
+                audio_format="wav",
+                provider_name=voice.provider
+            )
+        except ValueError as e:
+            if "not configured" in str(e).lower():
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Voice sample not available - TTS provider not configured for {voice.provider}")
+            raise
         src_path = settings.AUDIO_DIR / filename
         sample_path.write_bytes(src_path.read_bytes())
 

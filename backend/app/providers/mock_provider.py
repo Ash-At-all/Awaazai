@@ -172,7 +172,10 @@ class MockTTSProvider(TTSProvider):
         audio_format: str = "wav",
     ) -> bytes:
         voice_key = voice_id.lower().strip()
-        neural_voice = self.VOICE_MAPPING.get(voice_key, "hi-IN-MadhurNeural")
+        neural_voice = self.VOICE_MAPPING.get(
+            voice_key,
+            voice_id.strip() if voice_id.startswith(("hi-IN-", "en-IN-")) else "hi-IN-MadhurNeural",
+        )
 
         # Format rate and pitch adjustments for edge-tts
         # rate: e.g. "+10%", "-20%"

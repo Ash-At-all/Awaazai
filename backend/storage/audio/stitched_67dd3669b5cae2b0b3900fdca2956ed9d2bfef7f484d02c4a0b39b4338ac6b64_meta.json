@@ -1,0 +1,116 @@
+{
+  "id": "stitched_67dd3669b5cae2b0b3900fdca2956ed9d2bfef7f484d02c4a0b39b4338ac6b64",
+  "format": "wav",
+  "duration_seconds": 12.15,
+  "duration_ms": 12150,
+  "segments": [
+    {
+      "type": "dialogue",
+      "artist": "me",
+      "artist_id": "aob6mvc",
+      "text": ": claude yaar ye git or github me kya fark hai",
+      "start_ms": 0,
+      "end_ms": 4560,
+      "duration_ms": 4560,
+      "source_start": 3,
+      "source_end": 51,
+      "chunk_path": "C:\\D drive\\New Python Journey geezzzz\\INConvo\\backend\\storage\\audio\\98116f6a047346d3fc72efa411f16d9ff6a6782f7063f210e67ac7a24c32de92.wav"
+    },
+    {
+      "type": "pause",
+      "artist": null,
+      "artist_id": null,
+      "text": null,
+      "start_ms": 4560,
+      "end_ms": 4860,
+      "duration_ms": 300,
+      "source_start": 51,
+      "source_end": 64,
+      "chunk_path": null
+    },
+    {
+      "type": "dialogue",
+      "artist": "claude",
+      "artist_id": "aant6vd",
+      "text": ": Tujhe itna bhi nahi pata kya developer banega re tu",
+      "start_ms": 4860,
+      "end_ms": 9350,
+      "duration_ms": 4490,
+      "source_start": 72,
+      "source_end": 127,
+      "chunk_path": "C:\\D drive\\New Python Journey geezzzz\\INConvo\\backend\\storage\\audio\\2c6a7d1785ed4e43f27f06207674feac133917ed93fe77a2d3ad9b195a4f6042.wav"
+    },
+    {
+      "type": "pause",
+      "artist": null,
+      "artist_id": null,
+      "text": null,
+      "start_ms": 9350,
+      "end_ms": 9750,
+      "duration_ms": 400,
+      "source_start": 127,
+      "source_end": 140,
+      "chunk_path": null
+    },
+    {
+      "type": "dialogue",
+      "artist": "me",
+      "artist_id": "aob6mvc",
+      "text": ": ab bata bhi de yaar",
+      "start_ms": 9750,
+      "end_ms": 12150,
+      "duration_ms": 2400,
+      "source_start": 144,
+      "source_end": 166,
+      "chunk_path": "C:\\D drive\\New Python Journey geezzzz\\INConvo\\backend\\storage\\audio\\ced5a921f482d7878cf87916c6c423d5acdf81b753f79a4a52842e97474b8924.wav"
+    }
+  ],
+  "artists": [
+    {
+      "id": "aob6mvc",
+      "name": "me",
+      "voice_id": "eleven_prayan",
+      "speed": 0,
+      "stability": 0.3
+    },
+    {
+      "id": "aant6vd",
+      "name": "claude",
+      "voice_id": "eleven_roger",
+      "speed": 0,
+      "stability": 0.3
+    },
+    {
+      "id": "a65mx9c",
+      "name": "Artist3",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "aznf8nv",
+      "name": "Artist4",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "ai03eqs",
+      "name": "Artist5",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    },
+    {
+      "id": "a9v78mt",
+      "name": "Artist6",
+      "voice_id": "neeraj",
+      "speed": 0,
+      "stability": 0.5
+    }
+  ],
+  "characters_submitted": 126,
+  "characters_cached": 99,
+  "characters_synthesized": 21,
+  "estimated_cost_inr": 0.0315
+}

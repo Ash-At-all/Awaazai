@@ -3,6 +3,7 @@ from .base import TTSProvider
 from .mock_provider import MockTTSProvider
 from .sarvam_provider import SarvamTTSProvider
 from .fish_audio_provider import FishAudioTTSProvider
+from .elevenlabs_provider import ElevenLabsTTSProvider
 from ..config import settings
 
 class ProviderRegistry:
@@ -19,6 +20,8 @@ class ProviderRegistry:
                 cls._providers[provider_name] = FishAudioTTSProvider()
             elif provider_name == "mock":
                 cls._providers["mock"] = MockTTSProvider()
+            elif provider_name == "elevenlabs":
+                cls._providers["elevenlabs"] = ElevenLabsTTSProvider()
             else:
                 # Default to mock provider for unconfigured providers
                 print(f"[ProviderRegistry] Provider '{provider_name}' defaulting to mock.")

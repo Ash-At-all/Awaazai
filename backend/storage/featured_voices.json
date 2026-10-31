@@ -1,7 +1,7 @@
 [
   {
     "id": "fish_narration",
-    "name": "Narration",
+    "name": "Newz Reporter",
     "voice_id": "0de8162a9e384545a0106046b57488a7",
     "provider": "fish_audio",
     "label": "Deep, Expressive Storytelling",
@@ -27,8 +27,8 @@
     "voice_id": "528f686ef2154885b368dd4b93fb8728",
     "provider": "fish_audio",
     "label": "Gojo-style character — Cool & Heroic",
-    "sample_text": "फिक्र मत करो, जब तक मैं यहाँ हूँ, सब एकदम परफेक्ट होगा!",
-    "image_url": "",
+    "sample_text": "\"हेलो, आवाज़ AI में आपका स्वागत है। मेरा नाम राहुल है, आशा करता हूँ आपको यह आवाज़ पसंद आए",
+    "image_url": "/api/uploads/fv_9b524172bde2.webp",
     "order": 3,
     "active": true
   },
@@ -41,6 +41,17 @@
     "sample_text": "अरे अरे भाई साहब! मुस्कुराइए, क्योंकि अब आवाज़ एआई का जलवा शुरू होने वाला है!",
     "image_url": "",
     "order": 4,
+    "active": true
+  },
+  {
+    "id": "fv_c88a1eb0",
+    "name": "MOTU",
+    "voice_id": "f0d3d7abffde4f0999035a26fa22ee31",
+    "provider": "fish_audio",
+    "label": "Energetic, Excited",
+    "sample_text": "अरे बड़े भैया! आवाज़ AI में नई आवाज़ आई है",
+    "image_url": "/api/uploads/fv_e10bd5c8cba3.jpg",
+    "order": 5,
     "active": true
   }
 ]

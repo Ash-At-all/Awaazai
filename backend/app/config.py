@@ -28,6 +28,7 @@ class Settings:
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
     GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
     FISH_AUDIO_API_KEY: str = os.getenv("FISH_AUDIO_API_KEY", "")
+    FISH_AUDIO_MODEL: str = os.getenv("FISH_AUDIO_MODEL", "s2-pro")
     
     # Rate Limiting & Limits
     MAX_CHAR_LIMIT: int = int(os.getenv("MAX_CHAR_LIMIT", "2500"))

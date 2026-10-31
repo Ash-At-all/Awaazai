@@ -1,0 +1,77 @@
+diff --git a/backend/.env.example b/backend/.env.example
+index 7414ffd..3c5ec7b 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -5,6 +5,7 @@ DEFAULT_PROVIDER="mock"
+ # Optional Cloud Providers (Can be plugged in without code changes)
+ SARVAM_API_KEY=""
+ FISH_AUDIO_API_KEY=""
++FISH_AUDIO_MODEL="s2-pro"
+ AZURE_SPEECH_KEY=""
+ AZURE_SPEECH_REGION="centralindia"
+ ELEVENLABS_API_KEY=""
+diff --git a/backend/app/config.py b/backend/app/config.py
+index 3dbe4ee..08fce8b 100644
+--- a/backend/app/config.py
++++ b/backend/app/config.py
+@@ -28,6 +28,7 @@ class Settings:
+     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
+     GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+     FISH_AUDIO_API_KEY: str = os.getenv("FISH_AUDIO_API_KEY", "")
++    FISH_AUDIO_MODEL: str = os.getenv("FISH_AUDIO_MODEL", "s2-pro")
+     
+     # Rate Limiting & Limits
+     MAX_CHAR_LIMIT: int = int(os.getenv("MAX_CHAR_LIMIT", "2500"))
+diff --git a/backend/app/providers/fish_audio_provider.py b/backend/app/providers/fish_audio_provider.py
+index 67226b7..309d01a 100644
+--- a/backend/app/providers/fish_audio_provider.py
++++ b/backend/app/providers/fish_audio_provider.py
+@@ -90,13 +90,15 @@ class FishAudioTTSProvider(TTSProvider):
+     name: str = "fish"
+ 
+     API_URL = "https://api.fish.audio/v1/tts"
+-    DEFAULT_MODEL = "s2.1-pro-free"
++    # Valid `model` header values per Fish docs: s2-pro, s1, speech-1.6, speech-1.5
++    DEFAULT_MODEL = "s2-pro"
+ 
+     # Map AwaazAI internal voice IDs → Fish Audio reference_id
+     VOICE_MAPPING = {v["id"]: v["reference_id"] for v in FISH_FEATURED_VOICES}
+ 
+     def __init__(self, api_key: Optional[str] = None):
+-        self.api_key = api_key or settings.FISH_AUDIO_API_KEY
++        self.api_key = (api_key or settings.FISH_AUDIO_API_KEY or "").strip().strip('"').strip("'")
++        self.model = (settings.FISH_AUDIO_MODEL or self.DEFAULT_MODEL).strip()
+ 
+     async def health_check(self) -> bool:
+         """Verify API key is configured."""
+@@ -150,14 +152,14 @@ class FishAudioTTSProvider(TTSProvider):
+             "format": out_format,
+         }
+ 
+-        # Only add speed if not default (Fish Audio accepts 0.5–2.0)
++        # Speed must go inside `prosody` (a top-level "speed" key is not part of the API)
+         if speed != 1.0:
+-            payload["speed"] = max(0.5, min(2.0, round(speed, 2)))
++            payload["prosody"] = {"speed": max(0.5, min(2.0, round(speed, 2)))}
+ 
+         headers = {
+             "Authorization": f"Bearer {self.api_key}",
+             "Content-Type": "application/json",
+-            "model": self.DEFAULT_MODEL,
++            "model": self.model,
+         }
+ 
+         async with httpx.AsyncClient(timeout=45.0) as client:
+@@ -165,6 +167,12 @@ class FishAudioTTSProvider(TTSProvider):
+ 
+             if response.status_code == 401:
+                 raise RuntimeError("Fish Audio API: Invalid or expired API key.")
++            elif response.status_code == 402:
++                raise RuntimeError("Fish Audio API: Insufficient credits / payment required.")
++            elif response.status_code == 404:
++                raise RuntimeError(
++                    f"Fish Audio API: voice reference_id '{reference_id}' not found (removed or private?)."
++                )
+             elif response.status_code == 429:
+                 raise RuntimeError("Fish Audio API: Rate limit exceeded. Please wait and try again.")
+             elif response.status_code != 200:

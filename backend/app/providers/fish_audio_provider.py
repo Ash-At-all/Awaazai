@@ -83,6 +83,22 @@ FISH_FEATURED_VOICES = [
         "avatar_color": "from-amber-500 to-orange-600",
         "label": "Middle-aged funny man",
     },
+    {
+            "id": "fish_Rahul",
+            "display_name": "Rahul Jha (Fish Audio)",
+            "reference_id": "402dd13cbbd2483e93b226df813748b6",
+            "gender": "male",
+            "age_style": "Young",
+            "tone": "narration",
+            "language": "Hindi / Hinglish",
+            "accent": "Calm & Professional",
+            "description": "Narration voice — expressive, deep and clear, ideal for audiobooks and documentaries.",
+            "sample_text": "हेलो, आवाज़ AI में आपका स्वागत है। मेरा नाम राहुल है, आशा करता हूँ आपको यह आवाज़ पसंद आए।",
+            "license_type": "Fish Audio Platform",
+            "consent_proof_url": "https://fish.audio",
+            "avatar_color": "from-sky-500 to-blue-700",
+            "label": "Narration",
+        },
 ]
 
 
@@ -90,13 +106,15 @@ class FishAudioTTSProvider(TTSProvider):
     name: str = "fish"
 
     API_URL = "https://api.fish.audio/v1/tts"
-    DEFAULT_MODEL = "s2.1-pro-free"
+    # Valid `model` header values per Fish docs: s2-pro, s1, speech-1.6, speech-1.5
+    DEFAULT_MODEL = "s2-pro"
 
     # Map AwaazAI internal voice IDs → Fish Audio reference_id
     VOICE_MAPPING = {v["id"]: v["reference_id"] for v in FISH_FEATURED_VOICES}
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or settings.FISH_AUDIO_API_KEY
+        self.api_key = (api_key or settings.FISH_AUDIO_API_KEY or "").strip().strip('"').strip("'")
+        self.model = (settings.FISH_AUDIO_MODEL or self.DEFAULT_MODEL).strip()
 
     async def health_check(self) -> bool:
         """Verify API key is configured."""
@@ -150,14 +168,14 @@ class FishAudioTTSProvider(TTSProvider):
             "format": out_format,
         }
 
-        # Only add speed if not default (Fish Audio accepts 0.5–2.0)
+        # Speed must go inside `prosody` (a top-level "speed" key is not part of the API)
         if speed != 1.0:
-            payload["speed"] = max(0.5, min(2.0, round(speed, 2)))
+            payload["prosody"] = {"speed": max(0.5, min(2.0, round(speed, 2)))}
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "model": self.DEFAULT_MODEL,
+            "model": self.model,
         }
 
         async with httpx.AsyncClient(timeout=45.0) as client:
@@ -165,6 +183,12 @@ class FishAudioTTSProvider(TTSProvider):
 
             if response.status_code == 401:
                 raise RuntimeError("Fish Audio API: Invalid or expired API key.")
+            elif response.status_code == 402:
+                raise RuntimeError("Fish Audio API: Insufficient credits / payment required.")
+            elif response.status_code == 404:
+                raise RuntimeError(
+                    f"Fish Audio API: voice reference_id '{reference_id}' not found (removed or private?)."
+                )
             elif response.status_code == 429:
                 raise RuntimeError("Fish Audio API: Rate limit exceeded. Please wait and try again.")
             elif response.status_code != 200:

@@ -133,7 +133,9 @@ class SarvamTTSProvider(TTSProvider):
             raise ValueError("SARVAM_API_KEY is not configured in backend/.env")
 
         clean_voice = voice_id.lower().strip()
-        speaker = self.VOICE_MAPPING.get(clean_voice, "shubh")
+        # Internal AwaazAI IDs use the mapping; provider speaker IDs entered
+        # through the admin editor pass through unchanged.
+        speaker = self.VOICE_MAPPING.get(clean_voice, clean_voice)
 
         # Sarvam Bulbul accepts pace between 0.5 and 2.0
         clamped_pace = max(0.5, min(2.0, round(speed, 2)))
